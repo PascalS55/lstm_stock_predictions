@@ -1,0 +1,18 @@
+ETFs
+- SPY
+- QQQ
+- DIA
+- IWM
+- EEM
+
+Stocks
+- AAPL
+- MSFT
+- GOOGL
+- AMZN
+- TSLA
+- FB
+- BRK-B
+- JNJ
+- V
+- JPM
