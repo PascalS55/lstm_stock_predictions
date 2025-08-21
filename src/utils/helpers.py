@@ -51,3 +51,11 @@ def read_currently_used_data():
                     print(f"File not found: {file_path}")
 
     return data_dict
+
+
+def ensure_dirs(current_stock: str):
+    """
+    Ensures that the necessary directories for saving models and figures exist.
+    """
+    os.makedirs(f"models/{current_stock}", exist_ok=True)
+    os.makedirs(f"figs/{current_stock}", exist_ok=True)
