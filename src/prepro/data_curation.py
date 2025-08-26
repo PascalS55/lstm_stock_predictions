@@ -1,7 +1,9 @@
+from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import LocalOutlierFactor
+from polygon import RESTClient
 import pandas as pd
 import numpy as np
 
@@ -76,19 +78,65 @@ def create_preprocessing_pipeline(
     return pipeline
 
 
-def prepare_data(data: pd.DataFrame, window_size: int = 14) -> tuple:
-    correlation = data.corr()
-    print(correlation["Close"].sort_values(ascending=False))
-
-    X = (
-        data[["Open", "High", "Low", "Volume"]]
-        # .rolling(window=window_size)
-        # .mean()
-        .to_numpy()
-    )
-    y = data["Close"].to_numpy()
-    # Remove NaN values from X and y
-    # X = X[~np.isnan(y)]
-    # y = y[~np.isnan(y)]
+def prepare_data(data: pd.DataFrame) -> tuple:
+    # Handle both 'Open' and 'open' column names (case-insensitive)
+    cols = [
+        col for col in data.columns if col.lower() in ["open", "high", "low", "volume"]
+    ]
+    X = data[cols].to_numpy()
+    print(X.shape)
+    y_col = [col for col in data.columns if col.lower() == "close"]
+    y = data[y_col].to_numpy()
     y = y.reshape(-1, 1)
     return X, y
+
+
+def fetch_polygon_data(client: RESTClient, current_stock: str):
+    today = pd.Timestamp.now().strftime("%Y-%m-%d")
+    back_dated = (
+        pd.Timestamp.now()
+        .replace(year=pd.Timestamp.now().year - 2)
+        .strftime("%Y-%m-%d")
+    )
+    print("Date Range for stage 2 training:", back_dated, today)
+
+    try:
+        history = client.get_aggs(
+            ticker=current_stock.upper(),
+            multiplier=1,
+            timespan="day",
+            from_=back_dated,
+            to=today,
+        )
+        chart_data = pd.DataFrame(history)
+        chart_data["date_formatted"] = chart_data["timestamp"].apply(
+            lambda x: pd.to_datetime(x, unit="ms")
+        )
+        print(chart_data.head())
+        return chart_data
+
+    except Exception as e:
+        print(f"Error fetching history: {e}")
+        return
+
+
+def split_training_data(data, y, test_size=0.2, validate=False, shuffle=False):
+    if validate:
+        X_train, X_test, y_train, y_test = train_test_split(
+            data, y, test_size=test_size, shuffle=shuffle
+        )
+        X_train, X_dev, y_train, y_dev = train_test_split(
+            X_train, y_train, test_size=test_size, shuffle=shuffle
+        )
+        print(f"Train shape: {X_train.shape}, {y_train.shape}")
+        print(f"Dev shape: {X_dev.shape}, {y_dev.shape}")
+        print(f"Test shape: {X_test.shape}, {y_test.shape}")
+        return X_train, X_dev, X_test, y_train, y_dev, y_test
+
+    else:
+        X_train, X_test, y_train, y_test = train_test_split(
+            data, y, test_size=test_size, shuffle=shuffle
+        )
+        print(f"Train shape: {X_train.shape}, {y_train.shape}")
+        print(f"Test shape: {X_test.shape}, {y_test.shape}")
+        return X_train, X_test, y_train, y_test

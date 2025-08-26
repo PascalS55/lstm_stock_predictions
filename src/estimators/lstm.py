@@ -12,7 +12,7 @@ def tune_model(
     executions_per_trial=1,
     max_epochs=30,
     project_name="rnn_tuning",
-):
+) -> tuple[Model, kt.HyperParameters]:
     """
     Tunes LSTM or GRU model using Keras Tuner.
 

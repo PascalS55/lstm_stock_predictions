@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 
-def plot_predictions(ytest, ypred, name):
+def plot_predictions(ytest, ypred, name, update=False):
     """
     Plot the predicted values against the actual values.
 
@@ -29,11 +29,14 @@ def plot_predictions(ytest, ypred, name):
     plt.legend()
 
     # Show and save the plot
-    plt.savefig("figs/" + name + "/predictions.png")
+    if update:
+        plt.savefig("figs/" + name + "/predictions_update.png")
+    else:
+        plt.savefig("figs/" + name + "/predictions.png")
     plt.show()
 
 
-def plot_loss(history, name):
+def plot_loss(history, name, update=False):
     plt.figure(figsize=(10, 6))
     plt.plot(history.history["loss"], label="loss")
     plt.plot(history.history["val_loss"], label="val_loss")
@@ -42,5 +45,8 @@ def plot_loss(history, name):
     plt.ylabel("Error")
     plt.legend()
     plt.grid(True)
-    plt.savefig("figs/" + name + "/loss.png")
+    if update:
+        plt.savefig("figs/" + name + "/loss_update.png")
+    else:
+        plt.savefig("figs/" + name + "/loss.png")
     # plt.show()
