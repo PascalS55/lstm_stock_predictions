@@ -11,6 +11,7 @@ def tune_model(
     max_trials=10,
     executions_per_trial=1,
     max_epochs=30,
+    horizon=1,
     project_name="rnn_tuning",
 ) -> tuple[Model, kt.HyperParameters]:
     """
@@ -50,7 +51,7 @@ def tune_model(
             raise ValueError("model_type must be either 'lstm' or 'gru'")
 
         x = layers.Dropout(dropout)(x_rnn)
-        outputs = layers.Dense(1)(x)
+        outputs = layers.Dense(horizon)(x)
 
         model = Model(
             inputs=inputs, outputs=outputs, name=f"Tuned_{model_type.upper()}"

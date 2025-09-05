@@ -7,6 +7,8 @@ from polygon import RESTClient
 import pandas as pd
 import numpy as np
 
+from prepro.feature_eng import add_derived_features
+
 
 class TimeSeriesImputer(BaseEstimator, TransformerMixin):
     def __init__(self, method="linear"):
@@ -78,16 +80,50 @@ def create_preprocessing_pipeline(
     return pipeline
 
 
-def prepare_data(data: pd.DataFrame) -> tuple:
+def create_windows(X: np.array, y: np.array, window_size: int) -> np.array:
+    X = np.array(X)
+    n_samples, n_features = X.shape
+    n_windows = n_samples - window_size + 1
+    if n_windows <= 0:
+        raise ValueError("window_size is larger than the number of samples")
+
+    windows = np.zeros((n_windows, window_size, n_features))
+    y_aligned = np.zeros((n_windows, y.shape[1]))
+    for i in range(n_windows):
+        windows[i] = X[i : i + window_size]
+        y_aligned[i] = y[i + window_size - 1]
+    return windows, y_aligned
+
+
+def prepare_data(data: pd.DataFrame, horizon=1) -> tuple:
     # Handle both 'Open' and 'open' column names (case-insensitive)
     cols = [
-        col for col in data.columns if col.lower() in ["open", "high", "low", "volume"]
+        col
+        for col in data.columns
+        if col.lower() in ["open", "high", "low", "volume", "close"]
     ]
-    X = data[cols].to_numpy()
-    print(X.shape)
+    raw_features = data[cols]
+    data["dow"] = data["Date"].dt.dayofweek
+
     y_col = [col for col in data.columns if col.lower() == "close"]
-    y = data[y_col].to_numpy()
-    y = y.reshape(-1, 1)
+
+    features = add_derived_features(data[y_col[0]])
+
+    targets = pd.DataFrame(
+        {f"target_{h+1}": features["log_ret"].shift(-h) for h in range(horizon)}
+    )
+
+    model_df = pd.concat(
+        [raw_features, features, targets],
+        axis=1,
+    )
+    model_df = model_df.dropna(
+        subset=features.columns.tolist() + targets.columns.tolist()
+    )
+
+    X = model_df[raw_features.columns.tolist() + features.columns.tolist()].to_numpy()
+    y = model_df[targets.columns.tolist()].to_numpy()
+
     return X, y
 
 
@@ -109,7 +145,7 @@ def fetch_polygon_data(client: RESTClient, current_stock: str):
             to=today,
         )
         chart_data = pd.DataFrame(history)
-        chart_data["date_formatted"] = chart_data["timestamp"].apply(
+        chart_data["Date"] = chart_data["timestamp"].apply(
             lambda x: pd.to_datetime(x, unit="ms")
         )
         print(chart_data.head())

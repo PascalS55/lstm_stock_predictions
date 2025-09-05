@@ -59,3 +59,4 @@ def ensure_dirs(current_stock: str):
     """
     os.makedirs(f"models/{current_stock}", exist_ok=True)
     os.makedirs(f"figs/{current_stock}", exist_ok=True)
+    os.makedirs(f"results/{current_stock}", exist_ok=True)
